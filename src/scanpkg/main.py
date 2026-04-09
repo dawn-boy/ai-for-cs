@@ -7,6 +7,7 @@ from vulnerability import check_vulnerabilities
 from graph_builder import build_networkx_graph, extract_features
 from gnn_model import train_synthetic_model, predict_risk
 from cli_output import print_summary, print_vulnerabilities, print_exploit_paths, print_mitigation
+from ai_patcher import generate_patch
 
 console = Console()
 
@@ -14,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description="AI-powered cybersecurity CLI tool for Linux packages.")
     parser.add_argument("package", help="The target package to scan")
     parser.add_argument("--depth", type=int, default=2, help="Dependency resolution depth")
+    parser.add_argument("--ai-patch", action="store_true", help="Use AI to generate a patch/workaround for the detected vulnerabilities")
     
     args = parser.parse_args()
     target_pkg = args.package
@@ -55,6 +57,21 @@ def main():
     print_vulnerabilities(vulns_dict)
     print_exploit_paths(G, target_pkg, critical_nodes)
     print_mitigation(target_pkg, vulns_dict)
+    
+    # AI Patch Generation
+    if args.ai_patch and total_vulns > 0:
+        console.print("\n[bold magenta]=== AI Vulnerability Remediation ===[/bold magenta]\n")
+        # Limit to the first 3 vulnerabilities to avoid API spam
+        vulns_processed = 0
+        for pkg, vulns in vulns_dict.items():
+            for v in vulns:
+                if vulns_processed >= 3:
+                    console.print("[yellow]Note: Limited AI patch generation to top 3 vulnerabilities to prevent API spam.[/yellow]")
+                    break
+                generate_patch(pkg, v["id"], v["summary"])
+                vulns_processed += 1
+            if vulns_processed >= 3:
+                break
 
 if __name__ == "__main__":
     main()
