@@ -7,9 +7,9 @@ from rich.markdown import Markdown
 console = Console()
 
 def generate_patch(package_name, cve_id, description):
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        console.print("[yellow]⚠️ GEMINI_API_KEY environment variable not found. Skipping AI patch generation.[/yellow]")
+        console.print("[yellow]⚠️ GROQ_API_KEY environment variable not found. Skipping AI patch generation.[/yellow]")
         return
 
     prompt = f"""
@@ -28,25 +28,30 @@ def generate_patch(package_name, cve_id, description):
     Format your response in clean Markdown. Keep it concise, actionable, and focused on remediation.
     """
 
-    # Using Gemini 2.5 Flash for fast, accurate reasoning
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    # Using Groq API (OpenAI compatible endpoint) with Llama 3
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
     
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "generationConfig": {
-            "temperature": 0.2
-        }
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {"role": "system", "content": "You are a helpful cybersecurity expert."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.2
     }
     
     try:
-        with console.status(f"[bold cyan]🤖 AI is analyzing {cve_id} and generating a patch...[/bold cyan]"):
-            response = requests.post(url, json=payload, timeout=20)
+        with console.status(f"[bold cyan]🤖 AI is analyzing {cve_id} and generating a patch via Groq...[/bold cyan]"):
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             data = response.json()
             
-            text_response = data["candidates"][0]["content"]["parts"][0]["text"]
+            text_response = data["choices"][0]["message"]["content"]
             
             console.print(Panel(
                 Markdown(text_response), 
