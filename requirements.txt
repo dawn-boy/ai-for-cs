@@ -1,0 +1,5 @@
+networkx==3.2.1
+torch==2.2.0
+torch_geometric==2.5.0
+requests==2.31.0
+rich==13.7.0
